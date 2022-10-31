@@ -120,8 +120,11 @@ public class MovementDto {
                     Double setBalance = lastMovement.getBalance() - this.getAmount();
                     if (lastMovement.getBalance() < this.getAmount()) {
                         log.info("dto 1 if-------: ");
-                        bal = this.getAmount() - lastMovement.getBalance();
-                        // return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                        if(this.getDebitCardNumber() != null){
+                            bal = this.getAmount() - lastMovement.getBalance();
+                        }else{
+                            return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                        }
                     }
                     if(setBalance <= 0){
                         this.setAmount(lastMovement.getBalance());
@@ -141,8 +144,11 @@ public class MovementDto {
                     Double setBalance = bankAccount.getStartingAmount() - this.getAmount();
                     if (bankAccount.getStartingAmount() < this.getAmount()) {
                         log.info("dto 2 if-------: ");
-                        bal = this.getAmount() - bankAccount.getBalance();
-                        // return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                        if(this.getDebitCardNumber() != null){
+                            bal = this.getAmount() - bankAccount.getBalance();
+                        }else{
+                            return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                        }
                     }
                     if(setBalance <= 0){
                         this.setAmount(bankAccount.getStartingAmount());

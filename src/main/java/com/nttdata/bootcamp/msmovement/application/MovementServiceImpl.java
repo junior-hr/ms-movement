@@ -1,13 +1,11 @@
 package com.nttdata.bootcamp.msmovement.application;
 
-import com.nttdata.bootcamp.msmovement.config.WebClientConfig;
 import com.nttdata.bootcamp.msmovement.dto.MovementDto;
 import com.nttdata.bootcamp.msmovement.exception.ResourceNotFoundException;
 import com.nttdata.bootcamp.msmovement.infrastructure.BankAccountRepository;
 import com.nttdata.bootcamp.msmovement.infrastructure.CreditRepository;
 import com.nttdata.bootcamp.msmovement.infrastructure.MovementRepository;
 import com.nttdata.bootcamp.msmovement.model.BankAccount;
-import com.nttdata.bootcamp.msmovement.model.Credit;
 import com.nttdata.bootcamp.msmovement.model.Movement;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +16,6 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -52,9 +49,11 @@ public class MovementServiceImpl implements MovementService {
                 .flatMap(a -> {
                     log.info("sg validateMovementType-------a: " + a.toString());
                     if (movementDto.getDebitCardNumber() != null) {
-                        return bankAccountRepository.findBankAccountByDebitCardNumber(movementDto.getDebitCardNumber());
+                        return bankAccountRepository.findBankAccountByDebitCardNumber(movementDto.getDebitCardNumber())
+                                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Tarjeta de débito", "DebitCardNumber", movementDto.getDebitCardNumber())));
                     } else {
-                        return bankAccountRepository.findBankAccountByAccountNumber(movementDto.getAccountNumber());
+                        return bankAccountRepository.findBankAccountByAccountNumber(movementDto.getAccountNumber())
+                                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Número de cuenta", "AccountNumber", movementDto.getAccountNumber())));
                     }
                 })
                 .flatMap(account -> {

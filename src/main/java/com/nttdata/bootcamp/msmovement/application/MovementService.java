@@ -5,8 +5,6 @@ import com.nttdata.bootcamp.msmovement.model.Movement;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Date;
-
 public interface MovementService {
     public Flux<Movement> findAll();
 

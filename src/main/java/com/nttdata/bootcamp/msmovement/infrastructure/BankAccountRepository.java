@@ -69,7 +69,7 @@ public class BankAccountRepository {
                 );
     }
 
-    public Mono<BankAccount> findBankAccountByDebitCardNumber( String debitCardNumber) {
+    public Mono<BankAccount> findBankAccountByDebitCardNumber(String debitCardNumber) {
         log.info("Inicio----findBankAccountByDebitCardNumber-------debitCardNumber: " + debitCardNumber);
         WebClientConfig webconfig = new WebClientConfig();
         return webconfig.setUriData(propertyHostMsBankAccount)

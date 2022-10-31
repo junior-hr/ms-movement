@@ -1,7 +1,6 @@
 package com.nttdata.bootcamp.msmovement.infrastructure;
 
 import com.nttdata.bootcamp.msmovement.config.WebClientConfig;
-import com.nttdata.bootcamp.msmovement.model.BankAccount;
 import com.nttdata.bootcamp.msmovement.model.Credit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
