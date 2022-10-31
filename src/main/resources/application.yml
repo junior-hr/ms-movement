@@ -1,0 +1,40 @@
+server:
+  port: 8083
+  error:
+    include-message: always
+local:
+  property:
+    host:
+      ms-bank-account: http://localhost:8085
+      ms-client: http://localhost:8080
+      ms-credits: http://localhost8084
+      ms-loan: http://localhost8081
+      ms-debit-card: http://localhost8086
+spring:
+  application:
+    name: service-movement
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/MovementsDB
+      # host: localhost
+      # port: 27017
+      # database: MovementsDB
+      auto-index-creation: true
+  config:
+    import: optional:configserver:http://ms-config-server:8888
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:9093/eureka
+resilience4j:
+  circuitbreaker:
+    instances:
+      movement:
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 4
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 8
+        waitDurationInOpenState: 50s
+        permittedNumberOfCallsInHalfOpenState: 3
+message:
+  demo: leido desde local
