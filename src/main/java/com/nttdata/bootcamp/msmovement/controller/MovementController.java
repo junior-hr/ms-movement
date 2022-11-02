@@ -27,12 +27,12 @@ public class MovementController {
 
     @GetMapping
     public Mono<ResponseEntity<Flux<Movement>>> listMovements() {
-        return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(service.findAll()));
+        return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.findAll()));
     }
 
     @GetMapping("/{idMovement}")
     public Mono<ResponseEntity<Movement>> getMovementsDetails(@PathVariable("idMovement") String idMovement) {
-        return service.findById(idMovement).map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(c))
+        return service.findById(idMovement).map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(c))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
@@ -45,7 +45,7 @@ public class MovementController {
                 request.put("mensaje", "Movimiento de  guardado con exito");
                 request.put("timestamp", new Date());
                 return ResponseEntity.created(URI.create("/api/movements/".concat(c.getIdMovement())))
-                        .contentType(MediaType.APPLICATION_JSON_UTF8).body(request);
+                        .contentType(MediaType.APPLICATION_JSON).body(request);
             });
         });
     }
@@ -59,7 +59,7 @@ public class MovementController {
                 request.put("mensaje", "Movimiento de Credito guardado con exito");
                 request.put("timestamp", new Date());
                 return ResponseEntity.created(URI.create("/api/movements/".concat(c.getIdMovement())))
-                        .contentType(MediaType.APPLICATION_JSON_UTF8).body(request);
+                        .contentType(MediaType.APPLICATION_JSON).body(request);
             });
         });
     }
@@ -68,14 +68,14 @@ public class MovementController {
     public Mono<ResponseEntity<Movement>> editMovementCreditCardAndLoan(@Valid @RequestBody MovementDto movementDto, @PathVariable("idMovement") String idMovement) {
         return service.updateCreditCardLoan(movementDto, idMovement)
                 .map(c -> ResponseEntity.created(URI.create("/api/movements/".concat(idMovement)))
-                        .contentType(MediaType.APPLICATION_JSON_UTF8).body(c));
+                        .contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
     @PutMapping("/{idMovement}")
     public Mono<ResponseEntity<Movement>> editMovement(@Valid @RequestBody MovementDto movementDto, @PathVariable("idMovement") String idMovement) {
         return service.update(movementDto, idMovement)
                 .map(c -> ResponseEntity.created(URI.create("/api/movements/".concat(idMovement)))
-                        .contentType(MediaType.APPLICATION_JSON_UTF8).body(c));
+                        .contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
     @DeleteMapping("/{idMovement}")
@@ -87,7 +87,7 @@ public class MovementController {
     @GetMapping("/last/accountNumber/{accountNumber}")
     public Mono<ResponseEntity<MovementDto>> getLastMovementsByAccountNumber(@PathVariable("accountNumber") String accountNumber) {
         return service.findLastMovementsByAccountNumber(accountNumber)
-                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(c));
+                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
     @GetMapping("/accountNumber/{accountNumber}")
@@ -97,12 +97,12 @@ public class MovementController {
                     return Mono.just(mm);
                 })
                 .collectList()
-                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(c));
+                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
     @GetMapping("creditNumber/{creditNumber}")
     public Mono<ResponseEntity<Movement>> creditByCreditNumber(@PathVariable("creditNumber") Integer creditNumber){
-        return service.creditByCreditNumber(creditNumber).map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(c));
+        return service.creditByCreditNumber(creditNumber).map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
     @GetMapping("client/loanNumber/{loanNumber}")
@@ -112,7 +112,7 @@ public class MovementController {
                     return Mono.just(mm);
                 })
                 .collectList()
-                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(c));
+                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
     @GetMapping("client/creditNumber/{creditNumber}")
@@ -122,7 +122,7 @@ public class MovementController {
                     return Mono.just(mm);
                 })
                 .collectList()
-                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(c));
+                .map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
 }

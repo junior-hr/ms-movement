@@ -16,9 +16,6 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/MovementsDB
-      # host: localhost
-      # port: 27017
-      # database: MovementsDB
       auto-index-creation: true
   config:
     import: optional:configserver:http://ms-config-server:8888
@@ -29,12 +26,20 @@ eureka:
 resilience4j:
   circuitbreaker:
     instances:
-      movement:
+      creditCB:
         failureRateThreshold: 50
         minimumNumberOfCalls: 4
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 8
-        waitDurationInOpenState: 50s
+        waitDurationInOpenState: 2s
         permittedNumberOfCallsInHalfOpenState: 3
+      bankaccountCB:
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 4
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 8
+        waitDurationInOpenState: 2s
+        permittedNumberOfCallsInHalfOpenState: 3
+        
 message:
   demo: leido desde local
