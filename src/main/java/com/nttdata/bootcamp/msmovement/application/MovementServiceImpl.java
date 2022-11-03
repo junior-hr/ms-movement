@@ -4,8 +4,10 @@ import com.nttdata.bootcamp.msmovement.dto.MovementDto;
 import com.nttdata.bootcamp.msmovement.exception.ResourceNotFoundException;
 import com.nttdata.bootcamp.msmovement.infrastructure.BankAccountRepository;
 import com.nttdata.bootcamp.msmovement.infrastructure.CreditRepository;
+import com.nttdata.bootcamp.msmovement.infrastructure.MobileWalletRepository;
 import com.nttdata.bootcamp.msmovement.infrastructure.MovementRepository;
 import com.nttdata.bootcamp.msmovement.model.BankAccount;
+import com.nttdata.bootcamp.msmovement.model.MobileWallet;
 import com.nttdata.bootcamp.msmovement.model.Movement;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +31,8 @@ public class MovementServiceImpl implements MovementService {
     private BankAccountRepository bankAccountRepository;
     @Autowired
     private CreditRepository creditRepository;
+    @Autowired
+    private MobileWalletRepository mobileWalletRepository;
 
     @Override
     public Flux<Movement> findAll() {
@@ -70,7 +74,7 @@ public class MovementServiceImpl implements MovementService {
                             });
                 })
                 .flatMap(account ->
-                        validateAvailableAmount(account, movementDto, "save")
+                        validateAvailableAmount(account, null, movementDto, "save", false)
                                 .flatMap(a -> movementDto.MapperToMovement(null))
                                 .flatMap(mvt -> validateTransfer(movementDto)
                                         .flatMap(ac -> {
@@ -88,6 +92,56 @@ public class MovementServiceImpl implements MovementService {
                 );
 
     }
+
+    @Override
+    public Mono<Movement> saveMobileWallet(MovementDto movementDto) {
+        log.info("ini save------movementDto: " + movementDto.toString());
+        return movementDto.validateMovementType()
+                .flatMap(a -> {
+                    log.info("sg validateMovementType-------a: " + a.toString());
+                    return mobileWalletRepository.findMobileWalletByAccountNumber(movementDto.getCellphone())
+                            .switchIfEmpty(Mono.error(new ResourceNotFoundException("Monedero móvil", "Cellphone", movementDto.getCellphone())));
+                })
+                .flatMap(mw -> {
+                    if (mw.getAccount() != null) {
+                        movementDto.setAccountNumber(mw.getAccount().getAccountNumber());
+                        log.info("ant validateMovementLimit-------account: " + mw.getAccount().toString());
+                        return validateMovementLimit(mw.getAccount())
+                                .flatMap(o -> {
+                                    log.info("sg validateMovementLimit-------0: " + o.toString());
+                                    if (o.equals(true)) {
+                                        log.info("sg validateMovementLimit-------account.getCommissionTransaction(): " + mw.getAccount().getCommissionTransaction().toString());
+                                        log.info("sg validateMovementLimit-------movementDto.getAmount(): " + movementDto.getAmount().toString());
+                                        movementDto.setCommission(((mw.getAccount().getCommissionTransaction() / 100) * movementDto.getAmount()));
+                                    }
+                                    return Mono.just(mw);
+                                });
+                    } else {
+                        return Mono.just(mw);
+                    }
+                })
+                .flatMap(mw ->
+                        validateAvailableAmount(null, mw, movementDto, "save", true)
+                                .flatMap(a -> movementDto.MapperToMovement(null))
+                                .flatMap(mvt -> movementRepository.save(mvt))
+                                .flatMap(mvt -> {
+                                    log.info("sg movementRepository.save-------mvt.toString(): " + mvt.toString());
+                                    log.info("sg movementRepository.save-------mw.toString(): " + mw.toString());
+                                    if (mw.getAccount() != null) {
+                                        log.info("sg if ");
+                                        return bankAccountRepository.updateBalanceBankAccount(mw.getAccount().getIdBankAccount(), mvt.getBalance())
+                                                .then(Mono.just(mvt));
+                                    } else {
+                                        log.info("sg movementRepository.save-------mvt.toString(): " + mvt.toString());
+                                        log.info("sg movementRepository.save-------mvt.getBalance().toString(): " + mvt.getBalance().toString());
+                                        return mobileWalletRepository.updateBalanceMobilWallet(mw.getIdMobileWallet(), mvt.getBalance())
+                                                .then(Mono.just(mvt));
+                                    }
+                                })
+                );
+
+    }
+
 
     public Mono<BankAccount> validateTransfer(MovementDto movementDto) {
         log.info("ini validateTransfer-------0: " + movementDto.toString());
@@ -184,60 +238,65 @@ public class MovementServiceImpl implements MovementService {
                 );
     }
 
-    public Mono<Boolean> validateAvailableAmount(BankAccount bankAccount, MovementDto movementDto, String method) {
+    public Mono<Boolean> validateAvailableAmount(BankAccount bankAccount, MobileWallet mobileWallet, MovementDto movementDto, String method, Boolean mainAccountOnly) {
         log.info("ini validateAvailableAmount-------: ");
+
         if (method.equals("save")) {
             return movementRepository.findLastMovementByAccount(movementDto.getAccountNumber())
                     .switchIfEmpty(Mono.defer(() -> {
                         log.info("----1 switchIfEmpty-------: ");
                         return Mono.just(movementDto);
                     }))
-                    .flatMap(mvn -> movementDto.validateAvailableAmount(bankAccount, mvn))
+                    .flatMap(mvn -> movementDto.validateAvailableAmount(bankAccount, mobileWallet, mvn, mainAccountOnly))
                     .flatMap(rvt -> {
                         if (rvt > 0) {
-                            return bankAccountRepository.findBankAccountByDocumentNumberAndWithdrawalAmount(
-                                            bankAccount.getClient().getDocumentNumber(), bankAccount.getDebitCard().getCardNumber(), rvt
-                                    )
-                                    .collectList()
-                                    .flatMap(accs -> {
-                                        Double totalBalance = accs.stream()
-                                                .map(mp -> mp.getBalance() != null ? mp.getBalance() : 0)
-                                                .reduce((accumulator, number) -> accumulator + number)
-                                                .get();
-                                        if (totalBalance > rvt) {
-                                            return Mono.just(accs);
-                                        } else {
-                                            return Mono.error(new ResourceNotFoundException("No tiene saldo disponible", "balance", ""));
-                                        }
-                                    })
-                                    .flatMap(accs -> {
-                                        AtomicReference<Double> missingOutflowAmount = new AtomicReference<>(rvt);
-                                        List<BankAccount> bc = accs.stream()
-                                                .map(mp -> {
-                                                    Double iniMissingOutflowAmount = missingOutflowAmount.get();
-                                                    missingOutflowAmount.set(missingOutflowAmount.get() - mp.getBalance());
-                                                    Double setBalance = missingOutflowAmount.get() < 0 ? iniMissingOutflowAmount : mp.getBalance();
-                                                    mp.setBalance(setBalance);
-                                                    return mp;
-                                                })
-                                                .collect(Collectors.toList());
-                                        return Mono.just(bc);
-                                    })
-                                    .flatMapMany(Flux::fromIterable)
-                                    .flatMap(acc -> {
-                                        MovementDto movementDtoBalance = MovementDto.builder()
-                                                .accountNumber(acc.getAccountNumber())
-                                                .movementType(movementDto.getMovementType())
-                                                .amount(acc.getBalance())
-                                                .currency(movementDto.getCurrency())
-                                                .build();
-                                        movementDtoBalance.setBalance(rvt);
-                                        return save(movementDtoBalance).then(Mono.just(true));
-                                    })
-                                    .collectList()
-                                    .then(Mono.just(true));
-                        }
-                        else {
+                            if (mainAccountOnly.equals(false)) {
+                                return bankAccountRepository.findBankAccountByDocumentNumberAndWithdrawalAmount(
+                                                bankAccount.getClient().getDocumentNumber(), bankAccount.getDebitCard().getCardNumber(), rvt
+                                        )
+                                        .collectList()
+                                        .flatMap(accs -> {
+                                            Double totalBalance = accs.stream()
+                                                    .map(mp -> mp.getBalance() != null ? mp.getBalance() : 0)
+                                                    .reduce((accumulator, number) -> accumulator + number)
+                                                    .get();
+                                            if (totalBalance > rvt) {
+                                                return Mono.just(accs);
+                                            } else {
+                                                return Mono.error(new ResourceNotFoundException("No tiene saldo disponible", "balance", ""));
+                                            }
+                                        })
+                                        .flatMap(accs -> {
+                                            AtomicReference<Double> missingOutflowAmount = new AtomicReference<>(rvt);
+                                            List<BankAccount> bc = accs.stream()
+                                                    .map(mp -> {
+                                                        Double iniMissingOutflowAmount = missingOutflowAmount.get();
+                                                        missingOutflowAmount.set(missingOutflowAmount.get() - mp.getBalance());
+                                                        Double setBalance = missingOutflowAmount.get() < 0 ? iniMissingOutflowAmount : mp.getBalance();
+                                                        mp.setBalance(setBalance);
+                                                        return mp;
+                                                    })
+                                                    .collect(Collectors.toList());
+                                            return Mono.just(bc);
+                                        })
+                                        .flatMapMany(Flux::fromIterable)
+                                        .flatMap(acc -> {
+                                            MovementDto movementDtoBalance = MovementDto.builder()
+                                                    .accountNumber(acc.getAccountNumber())
+                                                    .movementType(movementDto.getMovementType())
+                                                    .amount(acc.getBalance())
+                                                    .currency(movementDto.getCurrency())
+                                                    .build();
+                                            movementDtoBalance.setBalance(rvt);
+                                            return save(movementDtoBalance).then(Mono.just(true));
+                                        })
+                                        .collectList()
+                                        .then(Mono.just(true));
+
+                            } else {
+                                return Mono.error(new ResourceNotFoundException("Monto", "Amount", movementDto.getAmount().toString()));
+                            }
+                        } else {
                             return Mono.just(true);
                         }
                     });
@@ -249,50 +308,55 @@ public class MovementServiceImpl implements MovementService {
                         log.info("----2 switchIfEmpty-------: ");
                         return Mono.just(movementDto);
                     }))
-                    .flatMap(mvn -> movementDto.validateAvailableAmount(bankAccount, mvn))
+                    .flatMap(mvn -> movementDto.validateAvailableAmount(bankAccount, mobileWallet, mvn, mainAccountOnly))
                     .flatMap(rvt -> {
                         if (rvt > 0) {
-                            return bankAccountRepository.findBankAccountByDocumentNumberAndWithdrawalAmount(
-                                            bankAccount.getClient().getDocumentNumber(), bankAccount.getDebitCard().getCardNumber(), rvt
-                                    )
-                                    .collectList()
-                                    .flatMap(accs -> {
-                                        Double totalBalance = accs.stream()
-                                                .map(mp -> mp.getBalance() != null ? mp.getBalance() : 0)
-                                                .reduce((accumulator, number) -> accumulator + number)
-                                                .get();
-                                        if (totalBalance > rvt) {
-                                            return Mono.just(accs);
-                                        } else {
-                                            return Mono.error(new ResourceNotFoundException("No tiene saldo disponible", "balance", ""));
-                                        }
-                                    })
-                                    .flatMap(accs -> {
-                                        AtomicReference<Double> missingOutflowAmount = new AtomicReference<>(rvt);
-                                        List<BankAccount> bc = accs.stream()
-                                                .map(mp -> {
-                                                    Double iniMissingOutflowAmount = missingOutflowAmount.get();
-                                                    missingOutflowAmount.set(missingOutflowAmount.get() - mp.getBalance());
-                                                    Double setBalance = missingOutflowAmount.get() < 0 ? iniMissingOutflowAmount : mp.getBalance();
-                                                    mp.setBalance(setBalance);
-                                                    return mp;
-                                                })
-                                                .collect(Collectors.toList());
-                                        return Mono.just(bc);
-                                    })
-                                    .flatMapMany(Flux::fromIterable)
-                                    .flatMap(acc -> {
-                                        MovementDto movementDtoBalance = MovementDto.builder()
-                                                .accountNumber(acc.getAccountNumber())
-                                                .movementType(movementDto.getMovementType())
-                                                .amount(acc.getBalance())
-                                                .currency(movementDto.getCurrency())
-                                                .build();
-                                        movementDtoBalance.setBalance(rvt);
-                                        return save(movementDtoBalance).then(Mono.just(true));
-                                    })
-                                    .collectList()
-                                    .then(Mono.just(true));
+
+                            if (mainAccountOnly.equals(false)) {
+                                return bankAccountRepository.findBankAccountByDocumentNumberAndWithdrawalAmount(
+                                                bankAccount.getClient().getDocumentNumber(), bankAccount.getDebitCard().getCardNumber(), rvt
+                                        )
+                                        .collectList()
+                                        .flatMap(accs -> {
+                                            Double totalBalance = accs.stream()
+                                                    .map(mp -> mp.getBalance() != null ? mp.getBalance() : 0)
+                                                    .reduce((accumulator, number) -> accumulator + number)
+                                                    .get();
+                                            if (totalBalance > rvt) {
+                                                return Mono.just(accs);
+                                            } else {
+                                                return Mono.error(new ResourceNotFoundException("No tiene saldo disponible", "balance", ""));
+                                            }
+                                        })
+                                        .flatMap(accs -> {
+                                            AtomicReference<Double> missingOutflowAmount = new AtomicReference<>(rvt);
+                                            List<BankAccount> bc = accs.stream()
+                                                    .map(mp -> {
+                                                        Double iniMissingOutflowAmount = missingOutflowAmount.get();
+                                                        missingOutflowAmount.set(missingOutflowAmount.get() - mp.getBalance());
+                                                        Double setBalance = missingOutflowAmount.get() < 0 ? iniMissingOutflowAmount : mp.getBalance();
+                                                        mp.setBalance(setBalance);
+                                                        return mp;
+                                                    })
+                                                    .collect(Collectors.toList());
+                                            return Mono.just(bc);
+                                        })
+                                        .flatMapMany(Flux::fromIterable)
+                                        .flatMap(acc -> {
+                                            MovementDto movementDtoBalance = MovementDto.builder()
+                                                    .accountNumber(acc.getAccountNumber())
+                                                    .movementType(movementDto.getMovementType())
+                                                    .amount(acc.getBalance())
+                                                    .currency(movementDto.getCurrency())
+                                                    .build();
+                                            movementDtoBalance.setBalance(rvt);
+                                            return save(movementDtoBalance).then(Mono.just(true));
+                                        })
+                                        .collectList()
+                                        .then(Mono.just(true));
+                            } else {
+                                return Mono.error(new ResourceNotFoundException("Monto", "Amount", movementDto.getAmount().toString()));
+                            }
                         } else {
                             return Mono.just(true);
                         }
@@ -306,7 +370,7 @@ public class MovementServiceImpl implements MovementService {
         return movementDto.validateMovementType()
                 .flatMap(at -> bankAccountRepository.findBankAccountByAccountNumber(movementDto.getAccountNumber()))
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Cuenta", "AccountNumber", movementDto.getAccountNumber())))
-                .flatMap(account -> validateAvailableAmount(account, movementDto, "update"))
+                .flatMap(account -> validateAvailableAmount(account, null, movementDto, "update", false))
                 .flatMap(a -> movementRepository.findById(idMovement)
                         .switchIfEmpty(Mono.error(new ResourceNotFoundException("Movement", "IdMovement", idMovement)))
                         .flatMap(c -> {

@@ -3,6 +3,7 @@ package com.nttdata.bootcamp.msmovement.dto;
 import com.nttdata.bootcamp.msmovement.exception.ResourceNotFoundException;
 import com.nttdata.bootcamp.msmovement.model.BankAccount;
 import com.nttdata.bootcamp.msmovement.model.Credit;
+import com.nttdata.bootcamp.msmovement.model.MobileWallet;
 import com.nttdata.bootcamp.msmovement.model.Movement;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -39,6 +40,8 @@ public class MovementDto {
     private Integer creditNumber;
 
     private Integer loanNumber;
+
+    private String cellphone;
 
     @NotEmpty(message = "no debe estar vacío")
     private String movementType;
@@ -105,60 +108,88 @@ public class MovementDto {
         });
     }
 
-    public Mono<Double> validateAvailableAmount(BankAccount bankAccount, MovementDto lastMovement) {
+    public Mono<Double> validateAvailableAmount(BankAccount bankAccount, MobileWallet mobileWallet, MovementDto lastMovement, Boolean mainAccountOnly) {
         log.info("ini dto validateAvailableAmount-------: ");
         log.info("ini dto validateAvailableAmount-------: lastMovement.toString() " + lastMovement.toString());
-        log.info("ini dto validateAvailableAmount-------: bankAccount.toString() " + bankAccount.toString());
+        // log.info("ini dto validateAvailableAmount-------: bankAccount.toString() " + bankAccount.toString());
         log.info("ini dto validateAvailableAmount-------: this.getMovementType() " + this.getMovementType());
         return Mono.just(this.getMovementType()).flatMap(ct -> {
             Double bal = 0.0;
             log.info("dto-------ct: " + ct);
 
             if (lastMovement.getIdMovement() != null) { // Existe almenos un movimiento
+
+                log.info("if1-----------------: ");
                 if (this.getMovementType().equals("withdrawal") || this.getMovementType().equals("output-transfer") || this.getMovementType().equals("payment")) {
+                    log.info("if2-----------------: ");
                     log.info("dto-------this.getAmount() -- lastMovement.getBalance(): " + this.getAmount() + " -- " + lastMovement.getBalance());
-                    Double setBalance = lastMovement.getBalance() - this.getAmount();
-                    if (lastMovement.getBalance() < this.getAmount()) {
-                        log.info("dto 1 if-------: ");
-                        if(this.getDebitCardNumber() != null){
-                            bal = this.getAmount() - lastMovement.getBalance();
-                        }else{
+                    if (mainAccountOnly.equals(true)) {
+                        Double setBalance = mobileWallet.getBalance() - this.getAmount();
+                        if (setBalance < 0) {
                             return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                        } else {
+                            this.setBalance(setBalance);
                         }
-                    }
-                    if(setBalance <= 0){
-                        this.setAmount(lastMovement.getBalance());
-                        this.setBalance(0.0);
-                    }else{
-                        this.setBalance(setBalance);
+                    } else {
+                        Double setBalance = lastMovement.getBalance() - this.getAmount();
+                        if (lastMovement.getBalance() < this.getAmount()) {
+                            log.info("dto 1 if-------: ");
+                            if (this.getDebitCardNumber() != null) {
+                                bal = this.getAmount() - lastMovement.getBalance();
+                            } else {
+                                return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                            }
+                        }
+                        if (setBalance <= 0) {
+                            this.setAmount(lastMovement.getBalance());
+                            this.setBalance(0.0);
+                        } else {
+                            this.setBalance(setBalance);
+                        }
+
                     }
                 } else if (this.getMovementType().equals("deposit") || this.getMovementType().equals("input-transfer")) {
-                    this.setBalance(lastMovement.getBalance() + this.getAmount());
+
+                    log.info("if11-----------------: ");
+                    this.setBalance( (mainAccountOnly.equals(true) ?  mobileWallet.getBalance() :  lastMovement.getBalance()) + this.getAmount());
                 } else {
+                    log.info("if1 else-----------------: ");
                     return Mono.error(new ResourceNotFoundException("Tipo movimiento", "getMovementType", this.getMovementType()));
                 }
 
             } else { // No tiene movimientos y se usa el monto incial
+                log.info("if2-----------------: ");
                 if (this.getMovementType().equals("withdrawal") || this.getMovementType().equals("output-transfer") || this.getMovementType().equals("payment")) {
-                    log.info("dto 2-------this.getAmount() -- bankAccount.getStartingAmount(): " + this.getAmount() + " -- " + bankAccount.getStartingAmount());
-                    Double setBalance = bankAccount.getStartingAmount() - this.getAmount();
-                    if (bankAccount.getStartingAmount() < this.getAmount()) {
-                        log.info("dto 2 if-------: ");
-                        if(this.getDebitCardNumber() != null){
-                            bal = this.getAmount() - bankAccount.getBalance();
-                        }else{
+                    // log.info("dto 2-------this.getAmount() -- bankAccount.getStartingAmount(): " + this.getAmount() + " -- " + bankAccount.getStartingAmount());
+
+                    if (mainAccountOnly.equals(true)) {
+                        Double setBalance = mobileWallet.getBalance() - this.getAmount();
+                        if (setBalance < 0) {
                             return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                        } else {
+                            this.setBalance(setBalance);
                         }
-                    }
-                    if(setBalance <= 0){
-                        this.setAmount(bankAccount.getStartingAmount());
-                        this.setBalance(0.0);
-                    }else{
-                        this.setBalance(setBalance);
+                    } else {
+                        Double setBalance = bankAccount.getStartingAmount() - this.getAmount();
+                        if (bankAccount.getStartingAmount() < this.getAmount()) {
+                            log.info("dto 2 if-------: ");
+                            if (this.getDebitCardNumber() != null) {
+                                bal = this.getAmount() - bankAccount.getBalance();
+                            } else {
+                                return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
+                            }
+                        }
+                        if (setBalance <= 0) {
+                            this.setAmount(bankAccount.getStartingAmount());
+                            this.setBalance(0.0);
+                        } else {
+                            this.setBalance(setBalance);
+                        }
                     }
                     //this.setBalance(bankAccount.getStartingAmount() - this.getAmount());
                 } else if (this.getMovementType().equals("deposit") || this.getMovementType().equals("input-transfer")) {
-                    this.setBalance(bankAccount.getStartingAmount() + this.getAmount());
+
+                    this.setBalance( (mainAccountOnly.equals(true) ?  mobileWallet.getBalance() :  bankAccount.getStartingAmount()) + this.getAmount());
                 } else {
                     return Mono.error(new ResourceNotFoundException("Tipo movimiento", "getMovementType", this.getMovementType()));
                 }
@@ -217,6 +248,7 @@ public class MovementDto {
                 .currency(this.getCurrency())
                 .movementDate(date)
                 .commission(this.getCommission())
+                .cellphone(this.getCellphone())
                 //.idCredit(this.getIdCredit())
                 //.idBankAccount(this.getIdBankAccount())
                 //.idLoan(this.getIdLoan())

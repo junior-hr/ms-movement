@@ -14,6 +14,8 @@ public interface MovementService {
 
     public Mono<Movement> save(MovementDto movementDto);
 
+    public Mono<Movement> saveMobileWallet(MovementDto movementDto);
+
     public Mono<Movement> saveCreditLoan(MovementDto movementDto);
 
     public Mono<Movement> update(MovementDto movementDto, String idMovement);

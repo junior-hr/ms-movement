@@ -30,7 +30,7 @@ public class BankAccountRepository {
         log.info("Inicio----findBankAccountByAccountNumber-------accountNumber: " + accountNumber);
         log.info("Inicio----findBankAccountByAccountNumber-------propertyHostMsBankAccount: " + propertyHostMsBankAccount);
         WebClientConfig webconfig = new WebClientConfig();
-        return webconfig.setUriData(propertyHostMsBankAccount)
+        return webconfig.setUriData("http://" + propertyHostMsBankAccount + ":8085")
                 .flatMap(d -> webconfig.getWebclient().get().uri("/api/bankaccounts/accountNumber/" + accountNumber).retrieve()
                         .onStatus(HttpStatus::is4xxClientError, clientResponse -> Mono.error(new Exception("Error 400")))
                         .onStatus(HttpStatus::is5xxServerError, clientResponse -> Mono.error(new Exception("Error 500")))
@@ -44,7 +44,7 @@ public class BankAccountRepository {
 
         log.info("ini----findMovementsByAccountNumber-------: ");
         WebClientConfig webconfig = new WebClientConfig();
-        Flux<BankAccount> movements = webconfig.setUriData(propertyHostMsBankAccount)
+        Flux<BankAccount> movements = webconfig.setUriData("http://" + propertyHostMsBankAccount + ":8085")
                 .flatMap(d -> webconfig.getWebclient().get().uri("/api/bankaccounts/documentNumber/" + documentNumber + "/cardNumber/" + cardNumber + "/withdrawalAmount/" + withdrawalAmount).retrieve()
                         .onStatus(HttpStatus::is4xxClientError, clientResponse -> Mono.error(new Exception("Error 400")))
                         .onStatus(HttpStatus::is5xxServerError, clientResponse -> Mono.error(new Exception("Error 500")))
@@ -61,7 +61,7 @@ public class BankAccountRepository {
         log.info("--updateBalanceBankAccount------- idBankAccount: " + idBankAccount);
         log.info("--updateBalanceBankAccount------- profile: " + balance);
         WebClientConfig webconfig = new WebClientConfig();
-        return webconfig.setUriData(propertyHostMsBankAccount)
+        return webconfig.setUriData("http://" + propertyHostMsBankAccount + ":8085")
                 .flatMap(d -> webconfig.getWebclient().put()
                         .uri("/api/bankaccounts/" + idBankAccount + "/balance/" + balance)
                         .accept(MediaType.APPLICATION_JSON).retrieve()
@@ -76,7 +76,7 @@ public class BankAccountRepository {
     public Mono<BankAccount> findBankAccountByDebitCardNumber(String debitCardNumber) {
         log.info("Inicio----findBankAccountByDebitCardNumber-------debitCardNumber: " + debitCardNumber);
         WebClientConfig webconfig = new WebClientConfig();
-        return webconfig.setUriData(propertyHostMsBankAccount)
+        return webconfig.setUriData("http://" + propertyHostMsBankAccount + ":8085")
                 .flatMap(d -> webconfig.getWebclient().get().uri("/api/bankaccounts/debitCardNumber/" + debitCardNumber).retrieve()
                         .onStatus(HttpStatus::is4xxClientError, clientResponse -> Mono.error(new Exception("Error 400")))
                         .onStatus(HttpStatus::is5xxServerError, clientResponse -> Mono.error(new Exception("Error 500")))

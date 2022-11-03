@@ -5,11 +5,12 @@ server:
 local:
   property:
     host:
-      ms-bank-account: http://localhost:8085
-      ms-client: http://localhost:8080
-      ms-credits: http://localhost8084
-      ms-loan: http://localhost8081
-      ms-debit-card: http://localhost8086
+      ms-bank-account: localhost
+      ms-client: localhost
+      ms-credits: localhost
+      ms-loan: localhost
+      ms-debit-card: localhost
+      ms-mobile-wallet: localhost
 spring:
   application:
     name: service-movement
@@ -34,6 +35,13 @@ resilience4j:
         waitDurationInOpenState: 2s
         permittedNumberOfCallsInHalfOpenState: 3
       bankaccountCB:
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 4
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 8
+        waitDurationInOpenState: 2s
+        permittedNumberOfCallsInHalfOpenState: 3
+      mobilewalletCB:
         failureRateThreshold: 50
         minimumNumberOfCalls: 4
         slidingWindowType: COUNT_BASED

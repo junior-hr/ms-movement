@@ -22,6 +22,8 @@ public class Movement {
 
     private String accountNumber;
 
+    private String cellphone;
+
     @NotNull(message = "no debe estar nulo")
     private Integer numberMovement;
 

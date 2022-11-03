@@ -27,7 +27,7 @@ public class CreditRepository {
     public Mono<Credit> findCreditByCreditNumber(String creditNumber) { //RACH Falta LoanNumber
         log.info("Inicio----findLastMovementByMovementNumber-------: ");
         WebClientConfig webconfig = new WebClientConfig();
-        return webconfig.setUriData(propertyHostMsCredits)
+        return webconfig.setUriData("http://" + propertyHostMsCredits + ":8084")
                 .flatMap(d ->  webconfig.getWebclient().get().uri("/api/credits/creditNumber/" + creditNumber).retrieve()
                         .onStatus(HttpStatus::is4xxClientError, clientResponse -> Mono.error(new Exception("Error 400")))
                         .onStatus(HttpStatus::is5xxServerError, clientResponse -> Mono.error(new Exception("Error 500")))

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
 import javax.validation.Valid;
 import java.net.URI;
 import java.util.Date;
@@ -48,6 +49,20 @@ public class MovementController {
                         .contentType(MediaType.APPLICATION_JSON).body(request);
             });
         });
+    }
+
+    @PostMapping("/mobileWallet")
+    public Mono<ResponseEntity<Map<String, Object>>> saveMovementMobileWallet(@Valid @RequestBody Mono<MovementDto> movementDto) {
+        Map<String, Object> request = new HashMap<>();
+        return movementDto.flatMap(mvDto ->
+                service.saveMobileWallet(mvDto).map(c -> {
+                    request.put("Movimiento", c);
+                    request.put("mensaje", "Movimiento de  guardado con exito");
+                    request.put("timestamp", new Date());
+                    return ResponseEntity.created(URI.create("/api/movements/".concat(c.getIdMovement())))
+                            .contentType(MediaType.APPLICATION_JSON).body(request);
+                })
+        );
     }
 
     @PostMapping("/creditCardAndLoan")
@@ -92,7 +107,7 @@ public class MovementController {
 
     @GetMapping("/accountNumber/{accountNumber}")
     public Mono<ResponseEntity<List<MovementDto>>> getMovementsByAccountNumber(@PathVariable("accountNumber") String accountNumber) {
-        return service.findMovementsByAccountNumber(accountNumber).flatMap( mm ->{
+        return service.findMovementsByAccountNumber(accountNumber).flatMap(mm -> {
                     log.info("--getMovementsByAccountNumber-------: " + mm.toString());
                     return Mono.just(mm);
                 })
@@ -101,13 +116,13 @@ public class MovementController {
     }
 
     @GetMapping("creditNumber/{creditNumber}")
-    public Mono<ResponseEntity<Movement>> creditByCreditNumber(@PathVariable("creditNumber") Integer creditNumber){
+    public Mono<ResponseEntity<Movement>> creditByCreditNumber(@PathVariable("creditNumber") Integer creditNumber) {
         return service.creditByCreditNumber(creditNumber).map(c -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(c));
     }
 
     @GetMapping("client/loanNumber/{loanNumber}")
     public Mono<ResponseEntity<List<MovementDto>>> getMovementsByLoanNumber(@PathVariable("loanNumber") String loanNumber) {
-        return service.findMovementsByLoanNumber(loanNumber).flatMap( mm ->{
+        return service.findMovementsByLoanNumber(loanNumber).flatMap(mm -> {
                     log.info("--getMovementsByLoanNumber-------: " + mm.toString());
                     return Mono.just(mm);
                 })
@@ -117,7 +132,7 @@ public class MovementController {
 
     @GetMapping("client/creditNumber/{creditNumber}")
     public Mono<ResponseEntity<List<MovementDto>>> getMovementsByCreditNumber(@PathVariable("creditNumber") Integer creditNumber) {
-        return service.findMovementsByCreditNumber(creditNumber).flatMap( mm ->{
+        return service.findMovementsByCreditNumber(creditNumber).flatMap(mm -> {
                     log.info("--findMovementsByCreditNumber-------: " + mm.toString());
                     return Mono.just(mm);
                 })
