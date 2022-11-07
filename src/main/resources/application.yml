@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: 8092
   error:
     include-message: always
 local:
@@ -20,6 +20,16 @@ spring:
       auto-index-creation: true
   config:
     import: optional:configserver:http://ms-config-server:8888
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    topic:
+      mobile:
+        name: mobile-wallet-topic
+      bank:
+        name: bank-account-topic
 eureka:
   client:
     service-url:

@@ -38,17 +38,13 @@ public class MovementController {
     }
 
     @PostMapping
-    public Mono<ResponseEntity<Map<String, Object>>> saveMovement(@Valid @RequestBody Mono<MovementDto> movementDto) {
-        Map<String, Object> request = new HashMap<>();
-        return movementDto.flatMap(mvDto -> {
-            return service.save(mvDto).map(c -> {
-                request.put("Movimiento", c);
-                request.put("mensaje", "Movimiento de  guardado con exito");
-                request.put("timestamp", new Date());
-                return ResponseEntity.created(URI.create("/api/movements/".concat(c.getIdMovement())))
-                        .contentType(MediaType.APPLICATION_JSON).body(request);
-            });
-        });
+    public Mono<ResponseEntity<Movement>> saveMovement(@Valid @RequestBody Mono<MovementDto> movementDto) {
+        return movementDto.flatMap(mvDto -> service.save(mvDto)
+                .doOnNext(s -> log.info("--saveMovement-------s : " + s))
+                .map(c -> ResponseEntity.created(URI.create("/api/movements/".concat(c.getIdMovement())))
+                        .contentType(MediaType.APPLICATION_JSON).body(c)
+                )
+        );
     }
 
     @PostMapping("/mobileWallet")

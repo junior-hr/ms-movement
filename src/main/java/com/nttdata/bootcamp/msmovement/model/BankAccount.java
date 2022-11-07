@@ -1,15 +1,19 @@
 package com.nttdata.bootcamp.msmovement.model;
 
+import org.springframework.data.annotation.Id;
+import javax.validation.constraints.NotEmpty;
 import com.nttdata.bootcamp.msmovement.dto.DebitCardDto;
-import lombok.Builder;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.data.annotation.Id;
-import javax.validation.constraints.NotEmpty;
 
+/**
+ * Class BankAccount.
+ * Movement microservice class BankAccount.
+ */
 @Getter
 @Setter
 @AllArgsConstructor

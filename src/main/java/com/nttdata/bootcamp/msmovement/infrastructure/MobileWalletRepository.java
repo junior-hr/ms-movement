@@ -38,6 +38,7 @@ public class MobileWalletRepository {
                 );
     }
 
+    //UPDATE RACH ELIMINAR
     @CircuitBreaker(name = Constants.MOBILEWALLET_CB, fallbackMethod = "getDefaultUpdateBalanceMobilWallet")
     public Mono<Void> updateBalanceMobilWallet(String idMobileWallet, Double balance) {
         log.info("--updateBalanceMobilWallet------- idMobileWallet: " + idMobileWallet);

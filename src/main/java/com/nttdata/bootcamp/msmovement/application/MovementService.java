@@ -5,6 +5,10 @@ import com.nttdata.bootcamp.msmovement.model.Movement;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+/**
+ * Class MovementService.
+ * Movement microservice class MovementService.
+ */
 public interface MovementService {
     public Flux<Movement> findAll();
 

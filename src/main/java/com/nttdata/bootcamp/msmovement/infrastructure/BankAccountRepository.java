@@ -56,6 +56,7 @@ public class BankAccountRepository {
         return movements;
     }
 
+    //UPDATE RACH ELIMINAR
     @CircuitBreaker(name = Constants.BANKACCOUNT_CB, fallbackMethod = "getDefaultUpdateBalanceBankAccount")
     public Mono<Void> updateBalanceBankAccount(String idBankAccount, Double balance) {
         log.info("--updateBalanceBankAccount------- idBankAccount: " + idBankAccount);

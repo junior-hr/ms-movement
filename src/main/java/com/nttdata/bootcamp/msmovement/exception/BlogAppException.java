@@ -1,10 +1,14 @@
 package com.nttdata.bootcamp.msmovement.exception;
 
+import org.springframework.http.HttpStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.http.HttpStatus;
 
+/**
+ * Class BlogAppException.
+ * Movement microservice class BlogAppException.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

@@ -1,10 +1,20 @@
 package com.nttdata.bootcamp.msmovement.model;
 
-import com.nttdata.bootcamp.msmovement.dto.DebitCardDto;
-import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import com.nttdata.bootcamp.msmovement.dto.DebitCardDto;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
+
+/**
+ * Class MobileWallet.
+ * Movement microservice class MobileWallet.
+ */
 @Document(collection = "MobileWallet")
 @Getter
 @Setter

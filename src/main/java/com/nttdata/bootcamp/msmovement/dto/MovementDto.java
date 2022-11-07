@@ -110,6 +110,7 @@ public class MovementDto {
 
     public Mono<Double> validateAvailableAmount(BankAccount bankAccount, MobileWallet mobileWallet, MovementDto lastMovement, Boolean mainAccountOnly) {
         log.info("ini dto validateAvailableAmount-------: ");
+        log.info("ini dto validateAvailableAmount-------mainAccountOnly: " + mainAccountOnly.toString());
         log.info("ini dto validateAvailableAmount-------: lastMovement.toString() " + lastMovement.toString());
         // log.info("ini dto validateAvailableAmount-------: bankAccount.toString() " + bankAccount.toString());
         log.info("ini dto validateAvailableAmount-------: this.getMovementType() " + this.getMovementType());
@@ -124,13 +125,16 @@ public class MovementDto {
                     log.info("if2-----------------: ");
                     log.info("dto-------this.getAmount() -- lastMovement.getBalance(): " + this.getAmount() + " -- " + lastMovement.getBalance());
                     if (mainAccountOnly.equals(true)) {
-                        Double setBalance = mobileWallet.getBalance() - this.getAmount();
+                        log.info("if22-----------------mobileWallet.getAccount(): " + (mobileWallet.getAccount() != null ? mobileWallet.getAccount() : ""));
+                        log.info("if2-----------------mainAccountOnly true: ");
+                        Double setBalance = (mobileWallet != null ? mobileWallet.getAccount().getBalance() : mobileWallet.getBalance()) - this.getAmount();
                         if (setBalance < 0) {
                             return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
                         } else {
                             this.setBalance(setBalance);
                         }
                     } else {
+                        log.info("if2-----------------mainAccountOnly false: ");
                         Double setBalance = lastMovement.getBalance() - this.getAmount();
                         if (lastMovement.getBalance() < this.getAmount()) {
                             log.info("dto 1 if-------: ");
@@ -151,7 +155,7 @@ public class MovementDto {
                 } else if (this.getMovementType().equals("deposit") || this.getMovementType().equals("input-transfer")) {
 
                     log.info("if11-----------------: ");
-                    this.setBalance( (mainAccountOnly.equals(true) ?  mobileWallet.getBalance() :  lastMovement.getBalance()) + this.getAmount());
+                    this.setBalance((mainAccountOnly.equals(true) ? mobileWallet.getBalance() : lastMovement.getBalance()) + this.getAmount());
                 } else {
                     log.info("if1 else-----------------: ");
                     return Mono.error(new ResourceNotFoundException("Tipo movimiento", "getMovementType", this.getMovementType()));
@@ -163,7 +167,7 @@ public class MovementDto {
                     // log.info("dto 2-------this.getAmount() -- bankAccount.getStartingAmount(): " + this.getAmount() + " -- " + bankAccount.getStartingAmount());
 
                     if (mainAccountOnly.equals(true)) {
-                        Double setBalance = mobileWallet.getBalance() - this.getAmount();
+                        Double setBalance = (mobileWallet.getAccount() != null ? mobileWallet.getAccount().getBalance() : mobileWallet.getBalance()) - this.getAmount();
                         if (setBalance < 0) {
                             return Mono.error(new ResourceNotFoundException("Monto", "Amount", this.getAmount().toString()));
                         } else {
@@ -189,7 +193,7 @@ public class MovementDto {
                     //this.setBalance(bankAccount.getStartingAmount() - this.getAmount());
                 } else if (this.getMovementType().equals("deposit") || this.getMovementType().equals("input-transfer")) {
 
-                    this.setBalance( (mainAccountOnly.equals(true) ?  mobileWallet.getBalance() :  bankAccount.getStartingAmount()) + this.getAmount());
+                    this.setBalance((mainAccountOnly.equals(true) ? mobileWallet.getBalance() : bankAccount.getStartingAmount()) + this.getAmount());
                 } else {
                     return Mono.error(new ResourceNotFoundException("Tipo movimiento", "getMovementType", this.getMovementType()));
                 }

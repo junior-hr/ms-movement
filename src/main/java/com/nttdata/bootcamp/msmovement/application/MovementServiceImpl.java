@@ -9,6 +9,11 @@ import com.nttdata.bootcamp.msmovement.infrastructure.MovementRepository;
 import com.nttdata.bootcamp.msmovement.model.BankAccount;
 import com.nttdata.bootcamp.msmovement.model.MobileWallet;
 import com.nttdata.bootcamp.msmovement.model.Movement;
+import com.nttdata.bootcamp.msmovement.producer.BankAccountProducer;
+import com.nttdata.bootcamp.msmovement.producer.MobileWalletProducer;
+import com.nttdata.bootcamp.msmovement.producer.mapper.BalanceBankAccountModel;
+import com.nttdata.bootcamp.msmovement.producer.mapper.BalanceMobileWalletModel;
+import com.nttdata.bootcamp.msmovement.util.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +38,12 @@ public class MovementServiceImpl implements MovementService {
     private CreditRepository creditRepository;
     @Autowired
     private MobileWalletRepository mobileWalletRepository;
+
+    @Autowired
+    private MobileWalletProducer mobileWalletProducer;
+
+    @Autowired
+    private BankAccountProducer bankAccountProducer;
 
     @Override
     public Flux<Movement> findAll() {
@@ -87,10 +98,11 @@ public class MovementServiceImpl implements MovementService {
                                             return Mono.just(mvt);
                                         }))
                                 .flatMap(mvt -> movementRepository.save(mvt))
-                                .flatMap(mvt -> bankAccountRepository.updateBalanceBankAccount(account.getIdBankAccount(), mvt.getBalance())
-                                        .then(Mono.just(mvt)))
-                );
-
+                                .flatMap(mvt -> {
+                                    bankAccountProducer.sendMessage(mapperBankAccountBalanceModel(account.getIdBankAccount(), mvt.getBalance()));
+                                    return Mono.just(mvt);
+                                }));
+        //bankAccountRepository.updateBalanceBankAccount(account.getIdBankAccount(), mvt.getBalance()).then(Mono.just(mvt))
     }
 
     @Override
@@ -129,19 +141,43 @@ public class MovementServiceImpl implements MovementService {
                                     log.info("sg movementRepository.save-------mw.toString(): " + mw.toString());
                                     if (mw.getAccount() != null) {
                                         log.info("sg if ");
-                                        return bankAccountRepository.updateBalanceBankAccount(mw.getAccount().getIdBankAccount(), mvt.getBalance())
-                                                .then(Mono.just(mvt));
+                                        log.info("sg mobileWalletProducer-------enviando a cola kafka ");
+                                        bankAccountProducer.sendMessage(mapperBankAccountBalanceModel(mw.getAccount().getIdBankAccount(), mvt.getBalance()));
+                                        return Mono.just(mvt);
+                                        //return bankAccountRepository.updateBalanceBankAccount(mw.getAccount().getIdBankAccount(), mvt.getBalance())
+                                        //.then(Mono.just(mvt));
                                     } else {
                                         log.info("sg movementRepository.save-------mvt.toString(): " + mvt.toString());
                                         log.info("sg movementRepository.save-------mvt.getBalance().toString(): " + mvt.getBalance().toString());
-                                        return mobileWalletRepository.updateBalanceMobilWallet(mw.getIdMobileWallet(), mvt.getBalance())
-                                                .then(Mono.just(mvt));
+                                        log.info("sg mobileWalletProducer-------enviando a cola kafka ");
+                                        mobileWalletProducer.sendMessage(mappeMobileWalletBalanceModel(mw.getIdMobileWallet(), mvt.getBalance()));
+                                        return Mono.just(mvt);
+                                        //return mobileWalletRepository.updateBalanceMobilWallet(mw.getIdMobileWallet(), mvt.getBalance())
+                                        //.then(Mono.just(mvt));
+
                                     }
                                 })
                 );
 
     }
 
+    private BalanceBankAccountModel mapperBankAccountBalanceModel(String idBankAccount, Double balance) {
+
+        BalanceBankAccountModel balanceModel = new BalanceBankAccountModel();
+        balanceModel.setIdBankAccount(idBankAccount == null ? Constants.TEXTO_VACIO : idBankAccount);
+        balanceModel.setBalance(balance);
+
+        return balanceModel;
+    }
+
+    private BalanceMobileWalletModel mappeMobileWalletBalanceModel(String idMobileWallet, Double balance) {
+
+        BalanceMobileWalletModel balanceModel = new BalanceMobileWalletModel();
+        balanceModel.setIdMobileWallet(idMobileWallet == null ? Constants.TEXTO_VACIO : idMobileWallet);
+        balanceModel.setBalance(balance);
+
+        return balanceModel;
+    }
 
     public Mono<BankAccount> validateTransfer(MovementDto movementDto) {
         log.info("ini validateTransfer-------0: " + movementDto.toString());

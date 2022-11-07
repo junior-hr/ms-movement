@@ -1,12 +1,17 @@
 package com.nttdata.bootcamp.msmovement.model;
 
-import lombok.Builder;
+import org.springframework.data.annotation.Id;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.data.annotation.Id;
 
+
+/**
+ * Class Loan.
+ * Movement microservice class Loan.
+ */
 @Getter
 @Setter
 @AllArgsConstructor
